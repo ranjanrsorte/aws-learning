@@ -64,8 +64,8 @@ Lecture 1:
 4. Multi Factor Authentication (MFA)
   - MFA devices options in AWS
     1. Virtual MFA device
-      a. Google Authenticator (Phone Only)
-      b. Authy (multi-device)
+      1. Google Authenticator (Phone Only)
+      2. Authy (multi-device)
         - It can be used in the multiple devices like phone, laptops etc
         - Support for multiple tokens, means we can authenticate multiple users using a single Authy account.
 
@@ -82,9 +82,9 @@ Lecture 1:
       - If we are using cloud of the government in the US then we will have a special Key Fob by the AWS GovCloud.
 
 5. Three options to access the AWS
-  1. AWS Management Console (protected by password + MFA)
-  2. AWS Command Line Interface (CLI): protected by access keys
-  3. AWS Software Developer Kit (SDK): for code- protected by access keys
+  - AWS Management Console (protected by password + MFA)
+  - AWS Command Line Interface (CLI): protected by access keys
+  - AWS Software Developer Kit (SDK): for code- protected by access keys
     - Enables to access and manage AWS services programmatically.
     - Language-specific APIs (set of libraries) are there to access the AWS services.
     - Embedded within the application.
@@ -120,15 +120,15 @@ Lecture 1:
       - We can use this information to revice the policies.
 
 10. IAM Guidelines & Best Practices
-  1. Don't use the root account except for new AWS acoount setup.
-  2. Don't give access to one account user to another user. Simply create a new user account for each user.
-  3. We can assign users to groups and assign permissions to group.
-  4. Create strong password policy.
-  5. Always make the use of MFA (Multi Factor Authentication).
-  6. Create and use Roles for giving the permissions to AWS services.
-  7. Use Access Keys for Programmatic Access (CLI / SDK).
-  8. Always Audit permissions of account with the IAM Credentials Report.
-  9. Never share IAM users & Access Keys.
+  - Don't use the root account except for new AWS acoount setup.
+  - Don't give access to one account user to another user. Simply create a new user account for each user.
+  - We can assign users to groups and assign permissions to group.
+  - Create strong password policy.
+  - Always make the use of MFA (Multi Factor Authentication).
+  - Create and use Roles for giving the permissions to AWS services.
+  - Use Access Keys for Programmatic Access (CLI / SDK).
+  - Always Audit permissions of account with the IAM Credentials Report.
+  - Never share IAM users & Access Keys.
 
 11. IAM - Summary
   - Users: mapped to a physical user, has password for AWS console.
