@@ -64,8 +64,8 @@ Lecture 1:
 4. Multi Factor Authentication (MFA)
   - MFA devices options in AWS
     1. Virtual MFA device
-      1. Google Authenticator (Phone Only)
-      2. Authy (multi-device)
+      - Google Authenticator (Phone Only)
+      - Authy (multi-device)
         - It can be used in the multiple devices like phone, laptops etc
         - Support for multiple tokens, means we can authenticate multiple users using a single Authy account.
 
