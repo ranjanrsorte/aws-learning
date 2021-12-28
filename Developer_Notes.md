@@ -151,3 +151,83 @@ Q. Why do we create groups & Users?
   - Because we want to allow them to use our AWS accounts and allow them to do same permissions.
 
 # Section 5: EC2 Fundamentals
+
+Amazon EC2
+- EC2 is one of the most popular of AWS offering
+- EC2 = Elastic Compute Cloud which is called as Infrastructure as a Service
+- It mainly consisits in the capacity of:
+  - Renting cirtual machines (EC2)
+  - Storing data on virtual drives (EBS)
+  - Distributing load across machines (ELB)
+  - Scaling the services using an auto-scaling group (ASG)
+- EC2 User data
+  - User data is a script that will be launched during the very and only first boot of the instance.
+
+EC2 Instance Types
+
+1. General Purpose
+  - Great for a diversity of workloads such as web servers or code repositories.
+  - It is Balance between Compute, Memory & Networking.
+2. Compute Optimized
+  - Great fo compute-intensive tasks that require high performance processors:
+    - Batch processing workloads
+    - Media transcoding
+    - High performance web servers
+    - High performance computing (HPC)
+    - Scientific modeling & machine learning
+    - Dedicated gaming servers
+  - All the compute type of instances are named as starting from 'c' i.e. C6g, C6gn, C5, C5a, C5n, C4 etc.
+3. Memory Optimized
+  - Fast performance for workloads that process large data sets in memory (RAM).
+  - Use cases:
+    - High performance, relational/non-relational databases.
+    - Distributed web scale cache stores
+    - In-memory databases optimized for Business Intelligence (BI)
+    - Applications performing real-time processing of big structured data
+  - All the Memory optimized instances are named as starting from 'r' i.e. R6g, R6i, R5, R5a etc
+4. Accelerated Computing
+5. Storage Optimized
+  - Great for storage-intensive tasks that require high, sequential read and write access to large data sets on local storage.
+  - Use cases:
+    - High frequency online transaction processing (OLTP) systems
+    - Relational & NoSQL databases
+    - Cache for in-memory databases (ex Redis)
+    - Data warehousing applications
+    - Distributed file systems
+6. Instance Features
+7. Measuring Instance Performance
+
+- We can find different types of instances that are optimised for different use cases on https://aws.amazon.com/ec2/instance-types/
+- AWS has the following naming convention:
+  - ex m5.2xlarge
+    - m: instance class
+    - 5: generation of instance (AWS improves them over time)
+    - 2xlarge: size within the instance class
+
+- Compare all the EC2 instances together on https://www.ec2instances.info/ which redirects to https://instances.vantage.sh/
+
+Security Groups
+- Security Groups are acting as a "firewall" on EC2 instances
+- Security Groups control traffic is allowed into or out EC2 instances.
+- Security groups rules can reference by IP or by security group
+- They regulate:
+  - Access to ports
+  - Authorised IP ranges - IPv4 & IPv6
+  - Control of inbound network (from other to the instance)
+  - Control of outbound network (from the instance to other)
+- Security Groups can be attached to multiple EC2 instances
+- Locked down to a region/VPC combination, means it is not accessible outside of the region where security group is created. For each region we have to create a Security Group.
+- Does live "outside" the EC2 instance, means if traffic is blocked the EC2 instance won't see it.
+- It's good to maintain one separate security group for SSH access
+- If application is not accessible(time out or site can't be reached) then it's a security group issue.
+- If the application gives a "connection refused" error, then it's an application error or it's not launched.
+- All inbound traffic is blocked by default.
+- All outbound traffic is authorised by default.
+
+Classic Ports to know
+- 22 = SSH (Secure Shell) - log into a Linux instance
+- 21 = FTP (File Transfer Protocol) - upload files into a file share
+- 22 = SFTP (Secure File Transfer Protocol) - upload files using SSH
+- 80 = HTTP - access unsecured websites
+- 443 = HTTPS - access secured websites
+- 3389 = RDP (Remote Desktop Protocol) - log into a Windows instance
