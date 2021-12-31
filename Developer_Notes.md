@@ -444,3 +444,74 @@ EC2 Instances Purchasing Options (Q. How to find the best Instances?)
   11. Check same data is updated in the file from the 2nd instance using below command
     `cat hello-world.txt`
 
+# Section 7: AWS Fundamentals: ELB + ASG
+
+- Scalability & High Availability
+  - Scalability means that an application / system can handle greater loads by adapting.
+  - There are two kinds of scalability:
+    1. Vertical Scalability
+      - Vertical Scalability means increasing the size of the instance
+      - For example, application runs on a t2.micro and we can upscale that application vertically means running it on t2.large
+      - Verical Scalability is very commin for non distributed systems, such as database.
+      - RDS, ElastiCache are services that can scale vertically.
+      - There's usually a limit to how much we can scale vertically. i.e hardware limit
+      - 
+    2. Horizontal Scalability (= elasticity)
+      - Horizontal Scalabilty means increasing the number of instances / systems for the application.
+      - Horizontal scaling implies to distributed systems.
+      - This is very common for web applications / modern applications.
+      - It's easy to horizontally scale because of the cloud offerings such as Amazon EC2. Just right click on instance and we can create number of same instance with some clicks.
+  - Scalibility is linked but different to High Availability
+  - High Availabilty means running application / system in at least 2 data centers (== Availability Zones)
+  - The goal of high availability is to survive a data center loss
+  - The high availability can be passive (for RDS Multi AZ)
+  - The high availability can be active (for horizontal scaling)
+
+- Load Balancing
+  - Q. What is load balancer?
+    - Load Balances are servers that forward traffic to multiple servers (e.g. EC2 instances) downstream.
+  - Q. Why use a load balancer?
+    - Spread load across multiple downstream instances
+    - Expose a single point of access (DNS) to your application
+    - Seamlessly handle failures of downstream instances
+    - Do regular health checks to instance
+    - Provide SSL termination (HTTPS) to websites
+    - Enforce stickiness with cookies
+    - High availability across zones
+    - Separate public traffic from private traffic
+  - Q. Why use an Elastic Load Balancer?
+    - An Elastic Load Balancer is a managed load balancer
+      - AWS guarantees that it will be working
+      - AWS takes care of upgrades, maintenance, high availability
+      - AWS provides only a few configuration knobs
+    - It costs less to setup own load balancer but it will take a lot more effort to setup.
+    - It is integrated with many AWS offerings / services
+      - EC2, EC2 Auto Scaling Groups, Amazon ECS
+      - AWS Certificate Manager (ACM), CloudWatch
+      - Route 53, AWS WAF, AWS Global Accelerator
+  - Health Checks
+    - Health Checks is a way for elastic load balancer to verify whether not an EC2 instance is properly working, because if it is not working properly, then we don't have to send any traffic to that instance.
+    - Health Checks are crucial for Load Balancers
+    - They enable the load balancer to know if instances it forwards traffic to are available to reply to requests or not.
+    - The Health Check is done on a port and a route (/health is common).
+    - If the response is not 200, then the instance is unhealthy.
+  - Types of load balancer on AWS
+    - AWS has 4 kinds of managed Load Balancers
+      - Classic Load Balancer (v1 - old generation) - 2009 - CLB (Deprecated, but available to use)
+        - Supports HTTP, HTTPS, TCP, SSL(secure TCP)
+      - Application Load Balancer (v2 - new generation) - 2016 - ALB
+        - Supports HTTP, HTTPS, Web Socket
+      - Network Load Balancer (v2 - new generation) - 2017 - NLB
+        - Supports TCP, TLS (secure TCP), UDP
+      - Gateway Load Balancer - 2020 - GWLB
+        - Operates at layer 3 (Network Layer) - IP Protocol
+    - Recommended to use newer generation load balancers as they provide more features
+    - Some load balancers can be setup as internal (private) or external (public) ELBs
+  - Load Balancer Security Groups
+    - The users can access the load balancer from anywhere using HTTP or HTTPS.
+    - Therefore the security group rule will be having the port range between 80 or 443 and the source will be 0.0.0.0/0, which means anywhere. And so we allow the users to connect to our load balancer.
+    - But the EC2 instances only allow traffic coming directly from the load balancer.
+    - Therefore the security group rule will be allowing the HTTP traffic on port 80 and source of it is not going to be an IP range, it is going to be a security group.
+    - So we need to link the security group of EC2 instance, to the security group of the load balancer. And effectively what it will do is that it will say that the EC2 instance is only allowing traffic if the traffic originates from the load balancer, which is an enhanced security mechanism.
+
+- Classic Load Balancer (v1)
