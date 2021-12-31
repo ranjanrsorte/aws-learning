@@ -169,7 +169,7 @@ EC2 Instance Types
   - Great for a diversity of workloads such as web servers or code repositories.
   - It is Balance between Compute, Memory & Networking.
 2. Compute Optimized
-  - Great fo compute-intensive tasks that require high performance processors:
+  - Great for compute-intensive tasks that require high performance processors:
     - Batch processing workloads
     - Media transcoding
     - High performance web servers
@@ -231,3 +231,216 @@ Classic Ports to know
 - 80 = HTTP - access unsecured websites
 - 443 = HTTPS - access secured websites
 - 3389 = RDP (Remote Desktop Protocol) - log into a Windows instance
+
+SSH Overview
+- SSH allow us to control a EC2 machine remotely.
+- SSH is the Secure Shell to servers which connects to the EC2 instances for doing some maintenance operation.
+- SSH is the command line utility which can be used on Mac & Linux as well as Windows 10 and above.
+- For lower version of windows we can use Putty. Putty will exceed the exact same thing as SSH. We can use on any version of Windows.
+- Putty use the SSH protocol to connect into the EC2 instances.
+- EC2 instance connect use the web browser to connect to EC2 instances. It works with Amazon NX2.
+
+Command for SSH to EC2 instance
+` ssh -i C:\Work\AWS\Learning\Developer\Material\EC2MyInstance.pem ec2-user@15.206.75.32 `
+- ssh : ssh command
+- -i : identity
+- C:\Work\AWS\Learning\Developer\Material\EC2MyInstance.pem : Path for .pem file
+- ec2-user : name of user from the EC2 (It can be any, here we are taking 'ec2-user')
+- 15.206.75.32 : Public IPv4 Address (It will always change if EC2 instance is stopped or terminated)
+
+EC2 Instances Purchasing Options (Q. How to find the best Instances?)
+1. On-Demand Instances
+  - These are the instances that we require for short workloads.
+  - Pay for what we use:
+    - For Linux or Windows - billing per second, after the first minute when On-Demand Instance is running.
+    - All other operating systems - billing is per hour when On-Demand Instance is running.
+    - Has the highest cost but no upfront payment.
+    - No long-term commitment
+    - Recommended for short-term and un-interrupted workloads, where we can't predict how the application will behave.
+2. Reserved Instances
+  - Reserved instances needs to be used for minimum 1 year, this is commitment to AWS.
+  - Up to 75% discount compared to On-demand.
+  - Reservation period: 1 year or 3 years (More the duration more will be the discount)
+  - Purchasing options: No Upfront (Pay Monthly) or Partial Upfront or All Upfront (Pay all amount at the time of purchasing).
+  - We have to Reserve a specific instance type. For example, I want t2.micro or I want C5.large.
+  - Recommended for steady-state usage applications (like database)
+  - There are three types of Reserved Instances:
+    - Reserved Intances: These are used for longer workloads such as database.
+    - Convertible Reserved Instances:
+      - When we have flexible instances, so we want to change their type over time.
+      - Up to 54% discount
+    - Scheduled Reserved Instances (Deprecated):
+      - Launch within reserved time window.
+      - When we require only for fraction of time within day / week / month
+      - Need commitment over 1 to 3 years.
+3. Spot Instances
+  - These are used for short workloads, cheap and we can lose them, they're less reliable.
+  - Can get a discount of upto 90% compared to On-demand.
+  - Instances that we can lose at any point of time if max price is less than the current spot price.
+  - The most cost-efficient instances in AWS.
+  - Useful for workloads like Batch jobs, Data analysis (One time analysis), Image processing, Any distributed workloads, Workloads with flexible start and stop time.
+  - Not suitable for critical jobs or databases.
+4. Dedicated Host Instances
+  - If we want to book an entire physical server and control the instance placement.
+  - Dedicated Hosts can help us address compliance requirements and reduce costs by allowing us to use our existing server-bound licenses.
+  - Allocated for our account for a 3 years period reservation.
+  - More expensive.
+  - Useful for software that have complicated licensing model (BYOL - Bring Your Own License) or for companies that have strong regulatory or compliance needs.
+  - So as we know AWS servers all of it's servers. If we don't want any other user to use our server then there we must have a physical server(Dedicated host server) for ourself.
+  - Per host billing.
+5. Dedicated Instances
+  - Instances running on hardware that's dedicated to us.
+  - May share hardware with other instances in same account.
+  - No control over instance placement.
+  - Per instance billing.
+
+# Section 6: EC2 Instance Storage
+- EBS Volume
+  - EBS stands for Elastic Book Store
+  - It is a network drive which can be attached to the instances while they run.
+  - It allows instances to persist data, even after their termination.
+  - They can only be mounted to one instance at a time.
+  - They are bound to specific availability zone. That means we cannot have a EBS volume created in us-east and bound to instance from us-west or some other region.
+  - Free tier: 30GB of free EBS storage of type General Purpose (SSD) or Magnetic per month.
+  - It uses the network to communicate with the instance, which means there might be a bit of latency.
+  - It can be detached from an EC2 instance and attached to another one quickly.
+  - It is locked on Availability zones, to move a volume across the zones we first need to snapshot(backup) it.
+  - Must have a provisioned capacity (size in GB)
+    - Billed as per provisioned capacity.
+    - We can increase the capacity of drive over time.
+
+- EBS Snapshots
+  - Make a backup (snapshot) of EBS volume at any point of time.
+  - Not necessary to detach volume from instance for snapshot, but it is recommended.
+  - We can copy snapshot across Availability Zones or regions.
+
+- AMI
+  - AMI: Amazon Machine Image
+  - AMI are a customization of an EC2 instance
+    - We can add our own software, configuration, operating system, monitoring etc
+    - Faster boot / configuration time because all our software are pre-packaged
+  - AMI are build for specific region and can be copied across the regions.
+  - We can launch EC2 instances from:
+    - A public AMI: AWS provided
+    - Own AMI: We can make and maintain them ourself
+    - An AWS Marketplace AMI: An AMI made by someone else and available in marketplace to purchase.
+
+- EC2 Instance Store
+  - EBS volumes are network drives with good but "limited" performance.
+  - If we need high performance hardware disk, use EC2 Instance Store.
+  - Q. Why to use EC2 Instance Store?
+    - Better I/O performance
+    - EC2 Instance Store loss their storage if they're stopped or If EC2 instance is stopped which has EC2 Store connected then also EC2 Instance Store lost.
+    - Good for buffer data / cache / scratch data / temporary content.
+    - Risk of data loss if harware fails.
+    - Backups and Replication needs to be implemented for preventing the data.
+
+- EBS Volume Types
+  - EBS Volumes come in 6 types:
+    1. gp2 / gp3 (SSD): General purpose SSD volume that balances price and performance for a wide variety of workloads.
+    2. io1 / io2 (SSD): Highest-performance SSD volume for mission-critical low-latency or high-throughput workloads.
+    3. st1 (HDD): Low cost HDD volume designed for frequently accessed, throughput-intensive workloads.
+    4. sc1 (HDD): Lowest cost HDD volume designed for less frequently accessed workloads.
+  - EBS volumes are characterized in size | Throughput | IOPS (I/O Ops Per Sec).
+  - Only gp2/gp3 and io1/io2 can be used as boot volumes.
+  - Use Cases:
+    1. General Purpose SSD
+      - Cost effective storage, low-latency
+      - Can be used as a System Boot volumes, Virtual desktops, Development and test environments.
+      - Has size between 1GB to 16TB. 
+      - gp3:
+        - Is the new generation type of volume.
+        - It has a baseline of 3000 IOPS and throughput of 124 MB/s
+        - IOPS can be increase up to 16000 and throughput up to 1000MB/s independently.
+      - gp2:
+        - It is the older type of volume.
+        - Small gp2 volumes can burst IOPS to 3000.
+        - Size of the volume and IOPS are linked, max IOPS is 16000.
+        - 3 IOPS per GB, means at 5334 GB we are at the max IOPS.
+    2. Provisioned IOPS (PIOPS) SSD
+      - Good for Critical business applications with sustained IOPS performance
+      - Or for the application that needs the more than 16000 IOPS
+      - Great for database workloads (sensitive to storage perf and consistency)
+      - io1 / io2 (4GB - 16GB):
+        - Max PIOPS: 64000 for Nitro EC2 instance & if we don't have Nitro instance then it will give 32000 PIOPS for other.
+        - Can increase PIOPS independently from storage size
+        - io2 have more durability and more IOPS per GB (at the same price as io1)
+      - io2 Block Express (4GB - 64TB):
+        - Gives the higher performance type of volume which gives sub-milisecond latency. 
+        - Max PIOPS: 256000 with an IOPS:GB ratio of 1000:1
+      - Supports EBS Multi-attach
+    3. Hard Disk Drives (HDD)
+      - Cannot be a boot volume
+      - Has size 125MB to 16TB
+      - Two kinds of volumes
+        - Throughput Optimized HDD (st1)
+          - Good for Big Data, Data Warehousing & Log Processing
+          - Which gives Max throughput of 500MB/s to max IOPS 500
+        - Cold HDD (sc1):
+          - For data that is infrequently accessed
+          - Can be used in a scenarios where lowest cost is important
+          - Max throughput 250MB/s to max IOPS of 250
+
+- EBS Multi-Attach - io1/io2 family
+  - This feature will give the ability to attach the same EBS volume to multiple EC2 instances in the same Availabilty Zone
+  - We can attach a EBS volume to multiple instances if that volume is from io1/io2 family
+  - Each attached instance to the volume has full read & write permissions to the volume
+  - Use Case:
+    - Achieve higher application availability clustered Linix applications (ex: Teradata)
+    - Applications must manage concurrent write operations
+  - Must use a file system that's cluster-aware (not XFS, EX4m etc...)
+
+- EFS - Elastic File System
+  - It is a managed NFS (Network File System) that can be mounted on many EC2 instances across many different Availabilty zone.
+  - EFS works with EC2 instances in mutiple availability zones
+  - Highly available, scalable & expensive (3x gp2), bill is calculated per use.
+  - Use cases: content management web serving data sharing, wordpress
+  - Uses NFSv4.1 protocol to mount a network drive
+  - Uses security group to control access to EFS
+  - Compatible with Linux based AMI (not Windows)
+  - To encrypt the EFS, we can use KMS keys.
+  - EFS is used only for POSIX file system (~Linux) that has a standard file API
+  - File system scales automatically, pay-per-use, no capacity planning
+
+- EFS - Performance & Storage Classes
+  - EFS Scale
+    - 1000s of concurrent NFS client, 10GB+ /s throughput
+    - Can grow to Petabyte-scale network file system, and that will be automatic
+  - Performance mode (set as EFS creation time)
+    - General Purpose(default): latency-sensitive use cases (web server, CMS etc)
+    - Max I/O - higher latency, throughput, highly parellel (big data, media processing)
+  - Throughput mode
+    - By default we are in bursting throughput mode.
+    - That means Bursting (1TB = 50MB/s + burst of up to 100MB/s)
+    - If we have very small file system, but we need very high throughput then we need to move into "provision throughput mode" for EFS.
+  - Storage Tiers (lifecycle management feature - move file after N days)
+    - It is a lifecycle management feature for the files to move a file into a new tier after may be some N days.
+    - So the standard is for frequently accessed files.
+    - Infrequent access (EFS-1A): cost to retrieve files, lower price to store
+
+- EFS - Demo Steps
+  1. Create a Security Group for EFS
+  2. Create a EFS by adding the Security group which is created in above step.
+  3. Create two instances on different availabilty zone with same security group.
+  4. SSH to both EC2 instances
+  5. For running the efs command we need to install the 'amazon-efs-utils'. Run below command on both instances for efs
+    `sudo yum install -y amazon-efs-utils`
+  6. Create a 'efs' directory on both instances using command
+    `mkdir efs`
+  7. Create a .txt file inside 'efs' folder on 1st instance using command
+    ```
+    cd efs
+    sudo touch hello-world.txt
+    ```
+  8. Check file is created or not inside 'efs' folder of 1st instance using command
+    `ls`
+  9. Check same file is created or not inside 'efs' folder of 2nd instance using command
+    ```
+    cd efs
+    ls
+    ```
+  10. Write something in the hello-world.txt file from 1st instance using below command
+    `sudo nano hello-world.txt`
+  11. Check same data is updated in the file from the 2nd instance using below command
+    `cat hello-world.txt`
+
