@@ -514,4 +514,104 @@ EC2 Instances Purchasing Options (Q. How to find the best Instances?)
     - Therefore the security group rule will be allowing the HTTP traffic on port 80 and source of it is not going to be an IP range, it is going to be a security group.
     - So we need to link the security group of EC2 instance, to the security group of the load balancer. And effectively what it will do is that it will say that the EC2 instance is only allowing traffic if the traffic originates from the load balancer, which is an enhanced security mechanism.
 
-- Classic Load Balancer (v1)
+- Classic Load Balancer (v1) (CLB)
+  - Supports TCP (Layer 4), HTTP & HTTPS (Layer 7)
+  - Health checks are TCP or HTTP based
+  - It has fixed hostname XXX.region.elb.amazon.com
+
+- Application Load Balancer (v2) (ALB)
+  - Application load balancers is Layer 7 (HTTP)
+  - Load balancing to multiple HTTP applications across machines (target groups)
+  - Load balancing to multiple applications the same machine (ex. containers)
+  - Support for HTTP/2 and WebSocket
+  - Support redirects (from HTTP to HTTPS) automatically at load balancer level
+  - Supports Route Routing
+    - Different Routing based on different target group
+      - Routing based on path in URL (example.com/users & example.com/posts)
+      - Routing based on hostname in URL (one.example.com & other.example.com)
+      - Routing based on query string, headers (example.com/users?id=123&order=false)
+  - ALB are great when we have microservices and container based application (Ex. Docker & Amazon ECS)
+  - It has a port mapping feature to redirect to a dynamic post in Amazon ECS
+  - In Classic Load Balancer we need multiple Classic Load Balancer for each application & in Application Load Balancer we need only one load balancer for all the applications.
+  - Target Groups
+    - EC2 instances (can be managed by an auto scaling group) - HTTP
+    - ECS tasks (managed by ECS itself) - HTTP
+    - Lambda functions - HTTP request is translated into a JSON event
+    - IP Addresses - must be private IPs
+    - ALB can route to multiple target groups
+    - Health checks are at the target group level
+  - ALB has fixed hostname (XXX.region.elb.amazonaws.com)
+  - The application servers don't see the IP of the client directly.
+    - The true IP of the client is inserted in the header X-Forwarded-For
+    - We can also get Port (X-Forwarded-Port) and proto (X-Forwarded-Proto)
+
+- Network Load Balancer (v2) (NLB)
+  - Network load balancer (layer 4) allows to:
+    - Forward TCP & UDP traffic to instances. It is lower level load balancer.
+    - Handle millions of request per seconds, so they are extremely high performance.
+    - Network latency is lower than ALB approximate 100ms compare to ALB which has network latency around 400ms
+    - NLB expose one static IP per availability zone on the outside. And this is very helpful while white-listing specific IP.
+    - NLB also supports elastic IPs instead of getting the ones given by the NLB itself.
+    - It means we can use NLB when we want to have two entry points, i.e dedicated specific IP for the application, and then the NLB will forward that traffic to EC2 instances.
+  - This is different from ALB & CLB which does not have static IP, but had a static host name.
+  - Use Cases:
+    - When we want extremely high performance
+    - Or If we want TCP or UDP layer traffic.
+  - NLB is not included in the AWS free-tier
+  - Target Groups
+    1. EC2 instances
+      - We can register EC2 instances with the target groups and then the network load balancer will know how to send traffic to instances.
+    2. IP Addresses -- must be private IPs
+      - We can specify fixed, static, private IP addresses, and have the NLB send traffic directly to instances.
+    3. Application Load Balancer
+      - It is possible to chain together a Network Load Balancer and an Application Load Balancer for leverage the feature of the NLB to have fixed static IPs.
+
+- Gateway Load Balancer (GWLB)
+  - It is used to deploy scale, and manage a fleet of 3rd party network virtual appliances in AWS.
+  - Use a gateway load balancer if we want to have all traffic of the network to go through a firewall that we have, or an instrusion detection and prevention system, deep packet inspection systems, payload manipulation.
+  - It operates at lower level than other load balancer that is on layer 3 which is network layer, IP Packets.
+  - Gateway load balancer combines the following functions:
+    - Transparent Network Gateway - Single entry/exit for all traffic
+    - Load Balancer - distributes traffic to your virtual appliances
+  - Uses GENEVE protocol on port 6081
+  - Target Groups:
+    1. EC2 instances
+    2. IP Addresses
+
+- Elastic Load Balancer (ELB)
+  - Sticky Sessions (Session Affinity)
+    - It is possible to implement stickiness so that the same client is always redirected to the same instance behind a load balancer.
+    - This works for Classic Load Balancer & Application Load Balancers
+    - The "cookie" used for stickiness has expiration date that we can control
+    - Use case: make sure the user doesn't load his session data.
+    - Enabling stickiness may bring imbalance to the load over the backend EC2 instances.
+    - For Example:
+      - Let's say we have 2 EC2 instances and a load balancer attached to it. We have 3 users who are making request. Load Balancer stickiness will take care of the each request made by the same user will always go to the same EC2 instance. It can be handled by the Session storage data and the Stickiness.
+  - Sticky Session (Cookie Name)
+    - There are two types of Cookie:
+      1. Application based cookie
+        - Custom cookie: 
+          - It is a custom cookie generated by the target that means by application, and we can include any custom attributes that we require for our application.
+          - The Cookie name must be specified individually for each target group
+          - Must not use the names AWSALB, AWSALBAPP and AWSALBTG (reserved for used by the ELB)
+        - Application Cookie:
+          - It is generated by the load balancer itself.
+          - Cookie name used by the ALB will be AWSALBAPP.
+        - Duration for Application based cookie is specified by the application itself.
+      2. Duration based cookie
+        - It is the cookie generated by the load balancer.
+        - Cookie name is AWSALB for ALB, AWSELB for CLB
+        - It will be having a expiry based on specific duration and the duration is generated by a load balancer.
+
+- Cross-Zone Load Balancing
+  - With Cross-Zone Load Balancing each load balancer instance distributes the traffic evenly across all the registered EC2 instances in all Availability Zone.
+  - Without Cross-Zone Load Balancing requests are distributed in the instances of the node of the Elastic Load Balancer.
+  - For Application Load Balancer
+    - Cross-Zone Balancing is always-on and we cannot disable it.
+    - Usually when data goes from one Availability Zone to other Availability Zone we have to pay for it. But as in ALB Cross-Zone load balacing is always enable and we cannot disable it, so we do not have to pay for it.
+  - For Network Load Balancer
+    - Cross-Zone Balancing is disabled by default.
+    - We can pay charges for inter Availabilty zone data transfer if we want to enable.
+  - Classic Load Balancer
+    - Disabled by default
+    - No charges for inter Availability Zone data transfer if enabled
