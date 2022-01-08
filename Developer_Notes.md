@@ -452,7 +452,7 @@ EC2 Instances Purchasing Options (Q. How to find the best Instances?)
     1. Vertical Scalability
       - Vertical Scalability means increasing the size of the instance
       - For example, application runs on a t2.micro and we can upscale that application vertically means running it on t2.large
-      - Verical Scalability is very commin for non distributed systems, such as database.
+      - Vertical Scalability is very common for non distributed systems, such as database.
       - RDS, ElastiCache are services that can scale vertically.
       - There's usually a limit to how much we can scale vertically. i.e hardware limit
       - 
@@ -554,6 +554,7 @@ EC2 Instances Purchasing Options (Q. How to find the best Instances?)
     - NLB also supports elastic IPs instead of getting the ones given by the NLB itself.
     - It means we can use NLB when we want to have two entry points, i.e dedicated specific IP for the application, and then the NLB will forward that traffic to EC2 instances.
   - This is different from ALB & CLB which does not have static IP, but had a static host name.
+  - Only Network Load Balancer provides both static DNS name and static IP. While, Application Load Balancer provides a static DNS name but it does NOT provide a static IP. The reason being that AWS wants your Elastic Load Balancer to be accessible using a static endpoint, even if the underlying infrastructure that AWS manages changes.
   - Use Cases:
     - When we want extremely high performance
     - Or If we want TCP or UDP layer traffic.
@@ -615,3 +616,204 @@ EC2 Instances Purchasing Options (Q. How to find the best Instances?)
   - Classic Load Balancer
     - Disabled by default
     - No charges for inter Availability Zone data transfer if enabled
+
+- SSL/TLS - Basics
+  - An SSL certificate allows the traffic between your client and your load balancer to be encrypted in the transit. This is called as in-flight encryption.
+  - SSL refers Secure Socket Layer, used to encrpyt the connection.
+  - TLS refers Transport Layer Security and this is the newer version of the SSL.
+  - Nowadays, TLS certificates are the one that are mainly used, but people mainly refers it as SSL.
+  - Public SSL certificate is issued by the Certificate Authority (CA)
+  - Comodo, Symantec, GoDaddy, GlobalSign, Digicert, Letsencrypt are the examples and using this public SSL certificates attach to our load balancer, we're able to encrypt the connection between the client and the load balancer.
+  - SSL certificate have an expiration date which is set by us and we must renewed.
+  - The Load Balancer uses an X.509 certificate (SSL/TLS certificate)
+  - We can manage the certificates using ACM (AWS Certificate Manager)
+  - We can create upload our own certificate alternatively
+  - HTTPS listeners:
+    - We must specify default certificate
+    - We can add a optional list of certs to support multiple domains
+    - Client can use SNI(Server Name Indication) to specify the hostname they reach
+    - Ability to specify a security policy to support older versions of SSL/TLS (legacy clients)
+
+- SNI - Server Name Indication
+  - SNI solves the problem of loading multiple SSL certificates onto one web server (to serve multiple websites)
+  - It's a newer protocol, and requires the client to indicate the hostname of the target server in the initial SSL handshake.
+  - The server will then find the correct certificate or return the default one.
+  - Note:
+    - Only works with ALB, NLB & CloudFront
+    - Does not work for CLB
+
+- Elastic Load Balancers - SSL Certificates
+  - Classic Load Balancer (v1)
+    - Supports only one SSL certificate
+    - Must use multiple CLB for multiple hostname with multiple SSL certificates
+  - Application Load Balancer (v2) and Network Load Balancer
+    - Supports multiple listeners with multiple SSL certificates
+    - Uses server name indication (SNI) to make it work
+
+- Connection Draining
+  - Feature naming
+    - Connection Draining for CLB
+    - Deregistration delay for NLB & ALB
+  - The idea behind this concept is that it will give some time for our instances to complete the in-flight request or the active request while the instance being in the de-register or unhealthy.
+  - Once connection is being drained then the ELB stops sending request to the EC2 instance which is de-registering
+  - We can parameterized the connection draining parameter between 1 to 3600 seconds (default: 300 seconds) and we can disable it by setting value 0 which means that there is no connection draining happening.
+  - Set to low value if requests are short.
+
+- Auto Scaling group (ASG)
+  - In real-life, the load on our websites and application can change.
+  - The goal of an Auto-Scaling Group (ASG) is to:
+    - Scale out (add EC2 instances) to match the increase load
+    - Scale In (remove EC2 instances) to match the decrease load
+    - Ensure we have minimum and maximum number of machines running in an ASG.
+    - It has feature of Automatically register new instances to a load balancer
+  - ASG attributes:
+    - Launch Configuration
+      - Has AMI and an Instance Type
+      - EC2 User data
+      - EBS Volumes
+      - Security Groups
+      - SSH key pair
+    - We also set Minimum size, Maximum size, Initial capacity as well as desired capacity.
+    - We can define the networks and the subnets in which our ASG will be able to create instances
+    - We can define Load Balancer Information or target group information based on which load balancer we use.
+    - When we create ASG we have to define Scaling Policies, so what would trigger the Scale Out or What would trigger the scale in.
+  - Auto Scaling Alarms:
+    - It is possible to scale an ASG based on CloudWatch alarms
+    - An alarms monitor a metric (such as Average CPU)
+    - Metrics are computed for the overall ASG instances
+    - Based on the alarm:
+      - We can create scale-out policies (increase the number of instances)
+      - We can create scale-in policies (decrease the number of instances)
+  - Auto Scaling Rules:
+    - It is now possible to define "better" auto scaling rules that are directly managed by EC2 instances.
+    - We can add rules for,
+      - Target Average CPU Usage
+      - Number of requests on the ELB per instance
+      - Average Network In/Out
+    - These rules are easier to setup from ELB
+  - Auto Scaling Custom Metric:
+    - The ASG isn't tied to the metrics AWS exposes, it's also be any metric we want.
+    - We can auto scale based on custom metric (ex. number of connected users)
+      1. Send custom metric from the application on EC2 to CloudWatch (using PutMetric API)
+      2. Create CloudWatch alarm to react to low/high values
+      3. Use the CloudWatch alarm as the scaling policy for ASG
+  - To update an ASG, we must provide a new launch configuration / launch template
+  - IAM rules attached to an ASG will get assigned to EC2 instances
+  - ASG are free. We pay for underlying resources being launched
+  - Having instances under an ASG means that if they get terminated for whatever reason, the ASG will automatically create new ones as replacement.
+  - ASG can terminate the instances marked as unhealthy by an Load Balancer.
+
+- Dynamic Scaling Policy
+  1. Target Tracking Scaling
+    - Most simple and easy to set-up
+    - Example: I want the average ASG CPU to stay at around 40%
+  2. Simple / Step Scaling
+    - When a CloudWatch alarm is triggered (example CPU > 70%), then increase the number of units as per requirement
+    - When a CloudWatch alarm is triggered (example CPU < 30%), then remove the unit as per requirement
+  3. Scheduled Actions
+    - Anticipate a scaling based on known usage patterns
+    - Example: Increase the min capacity to 10 to 5pm on Fridays
+
+- Predictive Scaling Policy
+  - Continuosly forecast the load and schedule scaling ahead
+  - That means, the historical load is going to be analyze over time and then a forecast is going to be created. And then based on that forecast, there will be scaling actions being scheduled ahead of time. Which is a quite a good way to scaling.
+
+- Good metrics to Scale On
+  1. CPU Utilization: Average CPU utilization across the instances
+  2. RequestCountPerTarget: to make sure that number of requests per EC2 instances is stable
+  3. Average Network In/Out (If application is network bound)
+  4. Any Custom Metric (that we push using CloudWatch)
+  - and based on above metrics we can setup our scaling policies.
+
+- Scaling Cooldown
+  - After a scaling activity happens, we are in a cooldown period (default 300 seconds)
+  - During the cooldown period, the ASG will not launch or terminate additional instances (to allow for metrics to stabilize)
+  - Always use ready-to-use AMI to reduce configuration time in order to be serving request fasters and reduce the cooldown period.
+
+- Hands On
+  - Create a dynamic auto scaling policy with Target value = 40
+  - Run below commands to increase the CPU utilization
+  ```
+  sudo amazon-linux-extras install epel -y
+  sudo yum install stress -y
+  stress -c 4
+  ```
+
+Q. You are using an Application Load Balancer to distribute traffic to your website hosted on EC2 instances. It turns out that your website only sees traffic coming from private IPv4 addresses which are in fact your Application Load Balancer's IP addresses. What should you do to get the IP address of clients connected to your website?
+  - When using an Application Load Balancer to distribute traffic to your EC2 instances, the IP address you'll receive requests from will be the ALB's private IP addresses. To get the client's IP address, ALB adds an additional header called X-Forwarded-For contains the client's IP address.
+
+Q. You hosted an application on a set of EC2 instances fronted by an Elastic Load Balancer. A week later, users begin complaining that sometimes the application just doesn't work. You investigate the issue and found that some EC2 instances crash from time to time. What should you do to protect users from connecting to the EC2 instances that are crashing?
+  - Enable ELB Health Checks, because When you enable ELB Health Checks, your ELB won't send traffic to unhealthy (crashed) EC2 instances.
+
+# Section 8: AWS Fundamentals: RDS + Aurora + ElastiCache
+
+- Amazon RDS
+  - RDS stands for Relational Database Service
+  - It's a managed DB service for DB use SQL as a query language
+  - It allows to create databases in the cloud that are managed by the AWS
+  - Types of database managed by AWS
+    1. Postgres
+    2. MySQL
+    3. MariaDB
+    4. Oracle
+    5. Microsoft SQL Server
+    6. Aurora (AWS Proprietary database)
+  
+  - Advantage over using RDS versus deploying DB on EC2
+    - RDS is a managed service and as such AWS provides a lot of services on top of just giving us a database. For Example,
+      - The provisioning of the database is fully automated and so is the underlying operating system patching.
+      - Continuous backups being made and we can restore to specific timestamp
+      - We can have Monitoring Dashboards to view performance of the database
+      - We can have read replicas for improved read performance
+      - We can setup multiple Availability Zones that will be helpful for disaster recovery
+      - We can have maintenance windows for upgrades
+      - And we can have both vertical & horizontal scaling capacity
+      - Storage is backed by EBS (gp2 or io1)
+      - We cannot do SSH to database RDS instances because it is a managed service AWS provides us a service, and we don't have access to the underlying EC2 instances
+
+  - RDS backups
+    - Backups are automatically enabled in the RDS
+    - Automated backups:
+      - Daily full backups of the database (during the maintenance window)
+      - Transaction logs are backed-up by RDS every 5 minutes
+      - It gives the ability to restore any point backup (from oldest to 5 mins ago)
+      - There is 7 days retention for this automatic backup by default and it can be increased to 35 days
+    - DB Snapshots: Snapshots are slightly different from the database backups
+      - Snapshots are the backups that are manually triggered by the user
+      - Snapshot retention can be as long as we want
+
+  - RDS - Storage Auto Scaling
+    - Helps to increase storage on the RDS database instance dynamically.
+    - When RDS detects that database instance is running out of the free database storage, it will automatically increase the storage size.
+    - Avoid manually scaling the database storage
+    - We have to set maximum storage threshold (maximum limit for DB storage)
+    - Automatically modify storage if:
+      - Free storage is less than 10% allocated storage
+      - Low-storage lasts atleast 5 minutes
+      - 6 hours have passed since last modification
+    - Useful for applications with unpredictable workloads
+    - Supports all RDS database engines (MariaDB, MySQL, PostgreSQL, SQL Server, Oracle)
+
+  - RDS Read Replicas vs Multi Availability Zones
+    - Read replicas as name indicates helps to scale your reads
+    - We can add upto 5 read replicas
+    - Within Availabilty Zone, Cross Availabilty Zone, or Cross Region
+    - Replication is async, so read are eventually consistent
+    - Replicas can be promoted to their own DB
+    - Applications must update the connection string to leverage read replicas
+    - Use case:
+      - You have a production database that is taking on normal load
+      - You want to load a reporting application to run some analytics
+      - You create a new replica for that RDS database. As running other application on the same database will cause the main application slower down because of increasing in the load on the main database.
+      - Creating a new replica will sync with the main database and the other application can run on the replica without affecting the production application
+      - Read replicas are used for SELECT (read) only kind of statements (not INSERT, UPDATE and DELETE)
+    - Network Cost:
+      - We have to pay for data transfer in AWS if data is transferring from one Availabilty Zone to another except for managed services.
+      - RDS is a managed services and for RDS read replicas within same region, we don't have to pay.
+      - But if we are using cross region replica, then will have replication that will go across regions and this will incur a replication fee for the network.
+    - From Single - AZ to Multi - AZ
+      - Zero downtime operation (no need to stop the DB)
+      - The following things happen internally:
+        - A snapshot is taken
+        - A new DB is restored from the snapshot in a new Availabilty Zone
+        - Synchronisation is established between the two databases.
