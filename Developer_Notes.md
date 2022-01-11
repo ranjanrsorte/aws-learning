@@ -839,7 +839,7 @@ Q. You hosted an application on a set of EC2 instances fronted by an Elastic Loa
         - Can copy a snapshot into an encrypted one
       - To Encrypt an un-encrypted RDS database:
         - Create a snapshot of the un-encrypted database
-        - Copy the snapshot and enable encryption foe the snapshot
+        - Copy the snapshot and enable encryption for the snapshot
         - Restore the database from the ecrypted snapshot
         - Migrate application to the encrypted new database and delete the old un-encrypted database.
     
@@ -994,3 +994,58 @@ Q. You hosted an application on a set of EC2 instances fronted by an Elastic Loa
           - 500 shards with single master, that means if we don't set any replicas then we will have 500 shards with single master
           - 250 shards with 1 master and 1 replica
           - 83 shards with one master and 5 replicas
+
+# Section 9: Route 53
+
+- DNS
+  - DNS is Domain Name System which translates the human friendly hostnames into machine IP addresses
+  - For example: www.google.com => 172.217.18.36
+  - DNS is the backbone of the internet
+  - DNS uses hierarchical naming structure- .com, example.com, www.example.com, api.example.com
+
+- DNS Terminology
+  - DNS Registrar: Amazon Route 53, GoDaddy etc
+  - DNS Records: A, AAAA, CNAME, NS etc
+  - Zone File: contains DNS records
+  - Name Server: resolves DNS queries (Authoritative or Non-Authoritative)
+  - Top Level Domain (TLD): .com, .us, .in, .gov, .org etc
+  - Second Level Domain (SLD): amazon.com, google.com etc
+
+- Route 53
+  - Overview:
+    - A highly available, scalable, fully managed and Authoritative DNS
+      1. Authoritative = the customer can update the DNS records
+    - Route 53 is also a Domain Registrar
+    - Ability to check the health of the resources
+    - The only AWS service which provides 100% availability SLA
+    - Why Route 53? 53 referencee to traditional DNS port used by DNS services
+  
+  - Route 53 - Records
+    - In Route 53 we are going to define a bunch of DNS records and the records define how we want to route traffic to a specific domain
+    - Each record contains:
+      1. Domain/subdomain name - e.g. example.com
+      2. Record Type - e.g. A or AAAA
+      3. Value - e.g. 12.34.56.78
+      4. Routing Policy - how Route 53 responds to queries
+      5. TTL - amount of time the record cached at DNS resolvers
+    - Route 53 supports the following DNS record types:
+      1. (must know) A / AAAA / CNAME / NS
+      2. (advanced) CAA / DS / MX / NAPTR / PTR / SOA / TXT / SPF / SRV
+  
+  - Route 53 - Record Types
+    1. A - maps a hostname to UPv4
+    2. AAAA - maps a hostname to IPv6
+    3. CNAME - maps a hostname to another hostname
+      - The target is a domain name which must have an A or AAAA record
+      - Can't create a CNAME record for the top node of a DNS namespace (Zone Apex)
+      - Example: you can't create for example.com, but you can create for www.example.com
+    4. NS - Name Servers for the Hosted Zones
+      - Control how traffic is routed for domain
+  
+  - Route 53 - Hosted Zones
+    - A container for records that define how to route traffic to a domain and its subdomains
+    - Public Hosted Zones - contains records that specify how to route traffic on the internet (public domain names) e.g. application1.mypublicdomain.com
+    - Private Hosted Zones - contain records that specify how you route traffic within one or more VPCs (private domain names)
+      - e.g application1.company.internal
+      - We have seen that some URL's are only accessible through the office network are in the pricate domain names
+    - We pay $0.40 per month per hosted zone & $12 per year
