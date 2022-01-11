@@ -817,3 +817,180 @@ Q. You hosted an application on a set of EC2 instances fronted by an Elastic Loa
         - A snapshot is taken
         - A new DB is restored from the snapshot in a new Availabilty Zone
         - Synchronisation is established between the two databases.
+  
+  - RDS Security
+    - Encryption
+      - At-rest encryption
+        - Possibility to encrypt the master & read replicas with AWS KMS - AES-256 encryption
+        - Encryption has to be defined at launch time
+        - If the master is not encrypted, the read replicas cannot be encrypted
+        - Transparent Data Encryption (TDE) available for Oracle and SQL Server
+      - In-flight encryption
+        - SSL certificates to encrypt data to RDS in flight
+        - Provide SSL option with trust certificate when connecting to database
+        - To enforce SSL:
+          - PostgreSQL: Need to set Parameter Groups rds.force_ssl=1 in the AWS RDS console
+          - MySQL: Within the DB need to run command ` GRANT USAGE ON *.* TO 'mysqluser'@'%' REQUIRE SSL;`
+    
+    - RDS Encryption Operations
+      - Encrypting RDS backups:
+        - Snapshots of un-encrypted RDS databases are un-encrypted
+        - Snapshots of encrypted RDS databases are encrypted
+        - Can copy a snapshot into an encrypted one
+      - To Encrypt an un-encrypted RDS database:
+        - Create a snapshot of the un-encrypted database
+        - Copy the snapshot and enable encryption foe the snapshot
+        - Restore the database from the ecrypted snapshot
+        - Migrate application to the encrypted new database and delete the old un-encrypted database.
+    
+    - Network & IAM
+      - Network Security
+        - RDS databases are usually deployed with private subnet, not in a public one
+        - RDS security works by leveraging security groups (the same concept as for EC2 instances) - it controls which IP / security group can communicate with RDS
+      - Access Management
+        - IAM policies help control who can manage AWS RDS (through RDS API)
+        - Traditional Username & Password can be used to login into the database
+        - IAM-based authentication can be used to login into RDS MySQL & PostgreSQL
+    
+    - IAM Authentication
+      - IAM database authentication works with MySQL and PostgreSQL
+      - We don't need a password, just an authentication token obtained through IAM & RDS API calls
+      - Auth token has a lifetime of 15 mins
+      - Benefits:
+        - Network in/out must be encrypted using SSL
+        - IAM to centrally manage users instead of DB
+        - Can leverage IAM Roles and EC2 Instance profiles for easy integration
+  
+  - Amazon Aurora
+    - Aurora is a proprietary technology from AWS (not open sourced)
+    - Postgres and MySQL are both supported as Aurora DB (that means drivers will work as if Aurora was a Postgres or MySQL database)
+    - Aurora is "AWS cloud optimized" and claims 5x preformance improvement over MySQL on RDS, over 3x the performance of Postgres on RDS
+    - Aurora storage automatically grows in increments of 10GB, up to 64TB
+    - Aurora can have 15 replicas while MySQL has 5, and the replication process is faster (sub 10ms replica lag)
+    - Failover in AUrora is instantaneous. It's High Availability native.
+    - Aurora costs more than RDS (20% more) - but is more efficient
+    - Aurora High Availability and Read Scaling
+      - It has 6 copies of the data across 3 Availabilty Zones:
+        - It needs 4 copies out of 6 for writes
+        - It needs 3 copies out of 6 for reads
+        - It has self-healing process which is that if some data is corrupted or bad, then it does self-healing with peer-to-peer replication in the backend.
+        - We can rely on 100s of storage volumes
+      - One Aurora instance takes writes i.e master
+      - It has automated failover for master in less than 30 seconds
+      - Master + up to 15 Aurora Read replicas serve reads
+      - It supports Cross Region Replication
+    - Aurora DB cluster
+      - Master will be the only thing that will writes to the storage. And because the master can change in the failover Aurora provides a Writer Endpoint.
+      - Writer Endpoint is the DNS name and it always points to the master. If the master fails in the failover still client talks to it and it automatically redirected to the right instance.
+      - There are multiple read replicas, and we have auto-scaling out of all these read replicas. So, we can have 1 up to 15 read replicas and we can setup auto-scaling such as we can have right number of read replicas.
+      - To track all these read replicas, we have Reader Endpoint. It helps with connection load balancing, and it connects automatically to all the read replicas.
+      - So anytime client connects to the reader endpoint, it will get connected to one of the read replicas and there will be load balancing. Load balancing happens at the connection level, not the statement level.
+    - Aurora Features
+      - Automatic fail-over
+      - Backup and Recovery
+      - Isolation and security
+      - Industry compliance
+      - Push-button scaling
+      - Automated patching with Zero Downtime
+      - Advanced Monitoring
+      - Routine Maintenance
+      - Backtrack: restore data at any point of time without using backups
+    - Aurora Security
+      - It has similar security ro RDS because it uses the same engines
+      - Encryption at rest using KMS
+      - Automated backups, snapshots and replicas are also encrypted
+      - Encryption in flight using SSL (same process as MySQL or Postgres)
+      - Possibility to authenticate using IAM token (same method as RDS)
+      - We are responsible for protecting the instance with security groups
+      - We can't SSH
+
+  - Amazon ElastiCache
+    - Overview:
+      - The way we get RDS to have managed Relational Databases, ElastiCache hepls to get managed Redis or Memcached which are cache technologies.
+      - Caches are in-memory databases with really high performance and low latency.
+      - Caches helps to reduce load off of the databases for read intensive workloads
+      - Cache helps application to be stateless by putting the state of the application into Amazon ElastiCache.
+      - AWS takes care of OS maintenance / patching, optimizations, setupm configuration, monitoring, failure recovery and backups
+      - Using ElastiCache involves heavy application code changes
+    - ElastiCache Solution Architecture - DB Cache
+      - The application will make queries to the ElastiCache. If query is aleady made and it is already stored in the ElastiCache then it's called cache hit.
+      - In case if data is not present in the ElastiCache then the query directly reads from the database.
+      - It helps to relieve load in RDS database
+      - There is cache invalidation strategy to make sure only the most current data is used in there.
+    - ElastiCache Solution Architecture - User Session Store
+      - User logs into any of the application and the application writes the session data into ElastiCache
+      - The user hits another instance of the application
+      - The instance retrieves the data and the user is logged in
+      - By this we can make our application stateless by writing the session data of the user into Amazon ElastiCache.
+    - ElastiCache - Redis vs Memcached
+    ```
+                    REDIS                                         MEMCACHED
+          1. Multi AZ with Auto-Failover                  1. Multi-node for partitioning of data (sharding)
+          2. Read replicas to scale reads and have        2. No high availabilty (replication)
+          high availability
+          3. Data Durability using AOF persistence        3. Non persistent
+          4. Backup and restore feature                   4. No backup and restore, Multi-threaded architecture
+    ```
+  
+    - Caching Implementation Considerations
+      1. Read about it more on: https://aws.amazon.com/caching/
+      2. Is it safe to cache data?
+        - Yes, but data may be out of date so you may have eventually consistent.
+      3. Is caching effective for that data?
+        - Yes if data changing slowly, and few keys are frequently needed.
+        - It is not effective if data changing rapidly, and all large key space frequently needed
+      4. Is data structured well for caching?
+        - If the data is in key value pair and properly organized then it will be a proper structured data and requires less time to execute queries.
+      5. Which caching design pattern is the most appropriate?
+        1. Lazy Loading / Cache-Aside / Lazy Population
+          - An application first make the request to the Amazon ElastiCache. If the data found then that is called as Cache hit. If data not found in ElastiCache then that is called as Cache miss. And in this case application read data from the database and one write operation is done on the backend to store the data to ElastiCache.
+            - Pros:
+              1. Only requested data is cached (The cache isn't filled up with unused data)
+              2. Node failures are not fatal (just increased latency to warm the cache)
+            - Cons:
+              - If cache miss occurs then that results in 3 round trips, noticeable delay for that request. Because first round to check data in ElastiCache, second round to read data from the database and third round for writing the data in ElastiCache.
+              - Data can be updated in the database and outdated in the cache.
+        2. Write Through - Add or update cache when database is updated
+          - When cache miss happens then data which is going to update in the database is also updates in the ElastiCache. That is why it is called the Write Through
+          - Pros:
+            1. Data in cache is never stale, reads are quick
+            2. Each write requires 2 calls, one for writing in the database and another call for writing in the ElastiCache. It means writing the data in the database may take longer time than reading the data.
+          - Cons:
+            1. Missing Data until it is added/updated in the Database. Mitigation is to implement Lazy Loading strategy as well
+            2. Cache churn - a lot of the data will never be read. So it will create problem if cache is very small.
+    
+    - Cache Evictions and Time-to-live (TTL)
+      - Cache eviction can occur in three ways:
+        - You can delete the item explicitly in the cache
+        - Items is evicted because the memory is gull and it's not recently used i.e Least Recently Used
+        - We can set an item time-to-live which will set a time for the cache and that can be removed after specific setted time
+      - TTL are helpful for any kind of data like,
+        - Leaderboards
+        - Comments
+        - Activity streams
+      - TTL can range from few seconds to hours or days
+      - If too many evictions happen due to memory, then we should scale up or out
+    
+    - Summary
+      1. Lazy Loading / Cache aside is easy to implement and works for many situations as a foundation, especially on the read side.
+      2. Write-through is usually combined with lazy loading as targeted for the queries or workloads that benefit from this optimization
+      3. Setting a TTL is usually not a bad idea, except when you're using Write-through. Set it to a sensible value for the application
+      4. Only cache the data that makes sense (user profiles, blogs etc)
+      ` Quote: There are only two hard things in Computer Science: cache invalidation and naming things `
+    
+    - ElastiCache Replication
+      1. Cluster Mode Disabled
+        - It has one primary node and can have up to 5 replicas cache node
+        - The replication is asynchronous between the caches
+        - The primary node is used for read/write
+        - The other nodes are read-only. So in disaster recovery we can enable other read replicas of ElastiCache for Redis.
+        - We have one shard so all the nodes have all the data will in the same redis cluster.
+        - Guarding against the data loss if there is node failures. And we can also enable multi AZ it is enabled by default in case we don't have multi AZ failover.
+      2. Cluster Mode Enabled
+        - Data is partitioned across all the shards
+        - Each shard has a primary and up to 5 replica nodes
+        - Muti-AZ capability
+        - Up to 500 nodes per cluster:
+          - 500 shards with single master, that means if we don't set any replicas then we will have 500 shards with single master
+          - 250 shards with 1 master and 1 replica
+          - 83 shards with one master and 5 replicas
