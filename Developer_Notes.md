@@ -1191,3 +1191,94 @@ Q. You hosted an application on a set of EC2 instances fronted by an Elastic Loa
 
 # Section 10: VPC Fundamentals
 
+- VPC
+  - Stands for Virtual Private Cloud
+  - In AWS Certified Developer Level following points are important:
+    1. VPC, Subnets, Internet Gateways & NAT Gateways
+    2. Security Groups, Network ACL (NACL), VPC Flow Logs
+    3. VPC Peering, VPC Endpoints
+    4. Site to Site VPN & Direct Connect
+  
+  - VPC & Subnets
+    - VPC is the private network in AWS cloud which allows us to deploy resources within it. And VPC is a regional resource
+    - If we have two different AWS regions then we have two different VPC's
+    - Inside VPC we have subnets. Subnets allow us to partition our network inside our VPC. And subnets are defined at the availability zone level
+    - A public subnet is the subnet that is accessible from the internet. This subnet can access world wide web and can be access in world wide web
+    - A private subnet is a subnet which is not accessible through the internet.
+    - To define access to the internet and between the subnets, we use Route Tables.
+    - VPC has number of IP ranges which is called as CIDR Range
+    - We have one public subnets per AZ and we have one VPC in each and every region that's created for us. It's called default VPC.
+    - Subnets are tied to a specific AZ and this is where we have been launching our EC2 instances and they represent the network partition of the VPC.
+  
+  - Internet Gateway & NAT Gateways
+    - Internet Gateways helps our VPC instances connect with the internet
+    - Public Subnets have a route to the internet gateway
+    - NAT Gateways (AWS-managed) & NAT instances (self-managed) allow instances in the Private subnets to access the internet while remaining private
+  
+  - Network ACL & Security Groups
+    - NACL (Network ACL)
+      1. It is the first mechanism of defence of our public subnet and at the subnet levels
+      2. Before the network traffic reaches to EC2 instance it has to go through Network ACL
+      3. It is the firewall which controls traffic from and to subnet
+      4. It can have ALLOW and DENY rules
+      5. It is attached at the Subnet level
+      6. It will allow only those IP addessed which are registered in the Rules
+    - Security Groups
+      1. Security groups are the firewall that controls traffic to and from an Elastic Network Interface(ENI) or an EC2 Instance
+      2. It can have only ALLOW rules
+      3. It will allow Rules which are includes for IP addresses and other security groups as well
+      4. Security groups are stateful and if traffic can go out, then it can go back in.
+
+  ```
+                        Security Groups                                                         Network ACL
+          1. Operates at the instance level                                       1. Operates at the subnet level
+          2. Supports allow rules only                                            2. Supports allow rules and deny rules
+          3. Is stateful: Return traffic is automatically allowed,                3. Is stateless: Return traffic must be explicitly allowed by
+          regardless of any rules                                                     rules
+          4. We evaluate all rules before deciding whether to allow               4. We process rules in number order when deciding whether to allow
+          traffic                                                                     traffic
+          5. Applies to an instance only if someone specifies the                 5. Automatically applies to all instances in the subnets it's associated
+          security group when launching the instance, or associates the             with (therefore, you don't have to rely on the users to specify the
+          security group with the instance later on                                 security group)
+  ```
+
+  - VPC Flow Logs
+    - This capture all the information about IP traffic going into the interfaces that includes,
+      - VPC Flow Logs
+        - anytime network going through VPC it would be logged in a Flow Log
+        - It will give all the allowed and denied traffic logs
+      - Subnet Flow Logs
+      - Elastic Network Interface Flow Logs
+    - This is to help in monitoring and troubleshooting connectivity issues.
+    - e.g. Why subnets are not talking to the internet? Or Why subnets are not talking to other subnets? Or Why Internet is not talking to the subnet? etc
+    - It will capture all the network information from the AWS managed interfaces too: Elastic Load Balancers, ElastiCache, RDS, Aurora, etc
+    - VPC Flow Logs data can go to S3 / CloudWatch Logs
+  
+  - VPC Peering
+    - It connects to VPC privately using AWS network virtually
+    - VPC Peering make all the VPC behave as if they were in the same network
+    - If we want to talk two different VPC in the network then we need to establish a VPC peering connection from one VPC to Another VPC
+    - Let's say we have two VPC's A & B and if we want to connect both the VPC's we need to create VPC peering between A to B.
+    - Let's say we have a third VPC called C, and we have established connection between A to C for the communication. But here in this case VPC B & VPC C will not communicate each other as there is no connection between B & C. For this we need to create a connection between B & C and they can able to connect
+    - We have to make sure that IP ranges that is defined for each VPC are not overlapping CIDR.
+    - VPC Peering connection is not trasitive, so it is must be established for each VPC that needs to communicate with one another.
+  
+  - VPC Endpoints
+    - Endpoints allow us to connect to AWS services using a private network instead of the public internet network.
+    - All the AWS services are public, so they publically access the internet.
+    - This gives us Enhanced security and lower latency to access AWS services
+    - If we want to access the database S3 / DynamoDB (which are in the public network) privately then we need VPC Endpoint Gateway.
+    - Example for VPC Endpoint Interface (which is used only within VPC) is CloudWatch
+  
+  - Site to Site VPN & Direct Connect
+    - To connect on-premises datacenter and the VPC following are the methods which can be used,
+      1. Site to Site VPN
+        - Connect an on-premises VPN to AWS services
+        - The connection is automatically encrypted
+        - Goes over the public internet
+      2. Direct Connect (DX)
+        - Establish a physical connection between the on-premises and AWS services
+        - The connection is private, secure and fast
+        - It goes over a private network
+        - Takes at least a month to establish
+    - Note: Site-to-Site VPN and Direct Connect cannot access VPC endpoints. Because VPC Endpoints are just to access AWS services privately within the VPC not by connecting to on-premises data center
