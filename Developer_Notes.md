@@ -1428,3 +1428,29 @@ Q. You hosted an application on a set of EC2 instances fronted by an Elastic Loa
       - any subsequent list request immediately reflects changes (list consistency)
     - This is available at no additional cost, without any performance impact
       
+# Section 12: AWS CLI, SDK, IAM Roles & Policies
+
+1. AWS EC2 Instance Metadata
+  - AWS EC2 Instance Metadata is powerful but one of the least known features to developers
+  - It allows AWS EC2 instances to "learn about themselves" without using an IAM Role for that purpose
+  - The URL for this is http://169.254.169.254/latest/meta-data
+  - Using above URL we can retrieve the IAM Role name from the metadata, but cannot retrieve the IAM Policy
+  - Metadata is the information about the EC2 instance
+  - Userdata was to launch the script of the EC2 instance
+
+2. Multi-Factor Authentication(MFA) with CLI
+  - To use MFA with the CLI, we must create a temporary session
+  - To do so, we must run the STS GetSessionToken API call
+  - Below is the command for creating the MFA with CLI with sample output
+  `aws sts get-session-token --[serial-number-of-mfa-device] [arn-of-the-mfa-device] --[token-code-of-mfa-device] [code-from-token] --duration-seconds 3600`
+  Sample Output:
+  ```
+  {
+    "Credentials": {
+      "SecretAccessKey": "secret-access-key",
+      "SessionToken": "temporary-session-token",
+      "Expiration": "expiration-date-time",
+      "AccessKeyId": "access-key-id"
+    }
+  }
+  ```
