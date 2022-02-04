@@ -1454,3 +1454,202 @@ Q. You hosted an application on a set of EC2 instances fronted by an Elastic Loa
     }
   }
   ```
+3. AWS SDK
+  - If we want to perform actions on AWS directly from the applications code without using CLI then we use AWS SDK (Software Development Kit).
+  - Official SDKs are- Jave, .NET, Node.js, PHP, Python (names Boto3 / botocore), Go, Ruby, C++
+  - We are using the Python SDK when we are using the CLI, because the CLI is written in Python and it uses the Boto3 SDK.
+  - We have to use the AWS SDK when coding against AWS services such as DynamoDB.
+  - If we don't specify the region or configure a default region, then us-east-1 will be chosen by default by the AWS SDK
+
+4. Exponential Backoff & Service Limit Increase
+  - AWS Limits (Quotes)
+    - API Rate Limits - means how many times we can call an AWS API in a row
+      - For Example, the DescribeInstances API for Amazon EC2 has a limit of 100 calls per seconds
+      - GetObject on S3 has a limit of 5500 GET per second per prefix
+      - If we go beyond the limits (Intermittent Errors) then we can handle this by implementing Exponential Backoff
+      - If we continuosly go beyond the limits (Consistent Errors) then we can request AWS to increase the API throttling limits for the services
+    - Service Quotas (Service Limits) - means how many resources we can run on AWS
+      - For Example, for the On-Demand Standard Instances, we can run upto 1152 vCPU and if we want to run more vCPUs then we can request a service limit increase by opening a ticket
+      - We can request a service quota increase by using the Service Quotes API
+  - Exponential Backoff
+    - When we get ThrottlingException intermittently then use Exponential Backoff
+    - This Retry mechanism is already included in AWS SDK API calls
+    - If we are implementing our own APIs to call AWS API or in specific cases then,
+      - must only implement the retries on 5xx server errors and throttling
+      - Do not implement on the 4xx client errors because 4xx error occurs only when the provided input is wrong and throttling with same input will always gives the error
+  
+5. AWS CLI Credentials Provider Chain
+  - The CLI will look for the credentials in the following order
+    1. Command line options
+      - If in the command any of this --region, --output, and --profile parameters are passed the AWS gives first preference to them
+    2. Environment variables
+      - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN this environment variables will be given the second preference
+    3. CLI credentials file
+      - aws configure
+        * ~/.aws/credentials on Linux / Mac & C:\Users\user\.aws\credentials on Windows
+    4. CLI configuration file
+      - aws configure
+        * ~/.aws/config on Linux /macOS & C:\Users\USERNAME\.aws.config on Windows
+    5. Container credentials - for ECS tasks
+    6. Instance profile credentials - for EC2 Instance Profiles
+  
+  - The SDK (e.g. Java SDK) will look for credentials in this order
+    1. Java System Properties - aws.accessKeyId and aws.secretKey
+    2. Environment variables - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+    3. The default credential profiles file - e.g. at: ~/.aws/credentials, shared by many SDK
+    4. Amazon ECS container credentials - for ECS containers
+    5. Instance profile credentials- used on EC2 instances
+  
+  - AWS Credentials Scenario
+    - An application deployed on an EC2 instance is using environment variables with credentials from an IAM user to call Amazon S3 API.
+    - The IAM user has S3FullAccess permissions
+    - The application only uses one S3 bucket, so according to best practices:
+      - We are defining one IAM Role & EC2 instance profile which was created for the EC2 instance
+      - The Role was assigned the minimum permissions to access that one S3 bucket
+    - The IAM Instance Profile was assigned to the EC2 instance, but it still had access to all S3 buckets because the credentials chain is still giving priorities to the environment variables
+
+  - AWS Credentials Best Practices
+    - Overall, Never ever store AWS credentials in the code
+    - Best practice is for credentials to be inherited from the credentials chain
+    - If we working within AWS, use IAM Roles
+      * EC2 Instances Roles for EC2 Instances
+      * ECS Roles for ECS tasks
+      * Lambda Roles for Lambda functions
+    - If we working outside of AWS, use environment variables / named profiles
+
+6. Signing AWS API requests
+  - When we call the AWS HTTP API, we sign the request so that AWS can identify us, using our AWS credentials i.e. access key & secret key
+  - Some requests to Amazon S3 don't need to be signed
+  - If we are using SDK or CLI then automatically the HTTP requests are signed for us
+  - If we are not using SDK and CLI then we need to sign them by ourself. For this we should sign an AWS HTTP request using Signature v4 (SigV4)
+
+
+# Section 13: Advanced S3 & Athena
+
+1. S3 MFA-Delete
+  - MFA (multi factor authentication) forces user to geberate a code on a device (usually a mobile phone or hardware) before doing important operations on S3
+  - To use MFA-Delete, we need to enable Versioning on the S3 bucket
+  - We will need MFA to
+    * Permanantly delete an object version
+    * suspend versioning on the bucket
+  - We won't need MFA for
+    * enabling versioning
+    * listing deleted versions
+  - Only the bucket owner (root account) can enable/disable MFA-Delete
+  - MFA-Delete currently can only be enabled using CLI
+
+2. S3 Default Encryption vs Bucket Policies
+  - One wat to "force encryption" is to use a bucket policy and refuse any API call to PUT an S3 object without encryption headers
+  - Another way is to use the "default encryption" option in S3
+  - Bucket Policies are evaluated before "default encryption"
+
+3. S3 Access Logs
+  - For audit purpose, we may want to log all access to S3 buckets
+  - Any request made to S3 from any account authorized or denied will be logged into another S3 bucket
+  - That data can be analyzed using data analysis tools ot Amazon Athena
+  - Warning:
+    - Do not set your logging bucket to be monitored bucket because it will create logging loop and bucket will grow in size exponentially and may cause a huge amount of AWS bill.
+  
+4. S3 Replication
+  - Must enable versioning in source and destination
+  - There are two types of replication - Cross Region Replication (CRR) & Same Region Replication (SRR)
+  - Buckets can be in different accounts
+  - Copying is asynchronous
+  - Must give proper IAM permissions to S3
+  - Use Case (CRR) - Is for compliance or lower latency access of our data into other regions, or to do cross accounts replication.
+  - Use Case (SRR) - Could be log aggregation, so we can have different logging buckets and we want to centralize them into one bucket or live replication e.g. Production and test accounts
+  - Notes:
+    * After activating replication, only new objects are replicated so it's not retroactive, it will not copy our existing states of S3 buckets.
+    * For DELETE operation there is an optional setting to tell you whether or not you want to replicate delete markers from source to target, Or if we specify the deletion with specific versionId then it is not going to be replicated to avoid malicious delete
+    * There is no chaining of replication that means, If a bucket one has replication to bucket two which has replication to bucket three then any object created in bucket 1 will be in bucket 2 but will not replicate to bucket 3
+
+5. S3 pre-signed URLs
+  - We can generate pre-signed URLs using SDK or CLI
+    * For downloads (It is easy and we can do this using CLI)
+    * For uploads (It is harder and must use the SDK)
+  - Valid for a default of 3600 seconds, can change timeout with --expires-in [TIME_BY_SECONDS] argument
+  - Users given a pre-signed URL inherit the permissions of the preson who generated the URL for GET / PUT
+  - Examples:
+    * Allow only logged-in users to download a premium video on your S3 bucket
+    * Allow an ever changing list of users to download files by generating URLs dynamically
+    * Allow temporarily a user to upload a file to precise location in our bucket
+
+6. S3 Storage Classes
+  - Following are the types of S3 Storage Classes
+    1. Amazon S3 Standard - General Purpose
+      - High durability (99.9999999999%) of objects across multiple AZ
+      - If you store 10,000,000 objects with Amazon S3, you can on average expect to incur a loss of a single object once every 10,000 years
+      - 99.99% Availability over a given year
+      - Sustain 2 concurrent facility failures
+      - Use Cases: Big Data analytics, mobile & gamimg applications, content distribution...
+    2. Amazon S3 Standard - Infrequent Access (IA)
+      - Suitable for data that is less frequently accessed, but requires rapid access when needed
+      - High durability (99.9999999999%) of objects across multiple AZs
+      - 99.9% Availability
+      - Low cost compared to Amazon S3 Standard
+      - Sustain 2 concurrent facility failures
+      - Use Cases: As a data store for disaster recovery, backups...
+    3. Amazon S3 One Zone - Infrequent Access
+      - Same as Amazon S3 Standard - Infrequent Access (IA) but data is stored in single AZ
+      - High durability (99.9999999999%) of objects in a single AZ, data lost when AZ is destroyed
+      - 99.5 % Availability
+      - Low latency and high throughput performance
+      - Supports SSL for data at transit and encryption at rest
+      - Low cost compared to Amazon S3 Standard - Infrequent Access (IA)
+      - Use Cases: Storing secondary backup copies of on-premise data, or storing data you can recreate. e.g. We can recreate a thumbnail from an image so we can store the image on S3 General Purpose and we can store the thumbnail on S3 One Zone Infrequent Access. And if we need to recreate that thumbnail over time we can easily do that from the main image.
+    4. Amazon S3 Intelligent Tiering
+      - Same low latency and high throughput performance of S3 Standard
+      - Small monthly monitoring and auto-tiering fee
+      - Automatically moves objects between two access tiers based on changing access patterns
+      - Designed for durability of 99.9999999999% of objects across multiple Availability Zones
+      - Resilent against events that impact an entire Availability Zone
+      - Designed for 99.9% availability over a given year
+    5. Amazon Glacier
+      - Low cost object storage meant for archiving and backup
+      - Data is retained for longer term (10s of years)
+      - Alternative to on-premise magnetic tape storage
+      - Average annaul durability is 99.9999999999%
+      - The cost is low per storage per month is $0.004 / GB + retrieval cost
+      - Each itrem in the Glacier is called Archive and each Archive can be a file up to 40 terabytes
+      - Archives are stored in "Vaults"
+      - 3 Retrieval options:
+        1. Expedited (1 to 5 minutes)
+        2. Standard (3 to 5 hours)
+        3. Bulk (5 to 12 hours)
+        4. Minimum storage duration of 90 days
+    6. Amazon Glacier Deep Archive
+      - For long term storage and cheap in cost
+      - Retrieval options
+        1. Standard (12 hours)
+        2. Bulk (48 hours)
+        3. Minimum storage duration of 180 days
+    7. Amazon S3 Reduced Redundancy Storage (deprecated)
+
+7. S3 - Moving between storage classes
+  - We can transition objects between storage classes
+  - From GALCIER we cannot go back to the STANDARD_IA, we have to restore the objects and then copy that restored copy into STANDARD_IA
+  - For insfrequently accessed objects, move them to STANDARD_IA
+  - For archive objects that we don't need in real time, the general rule is to move to GLACIER or DEEP_ARCHIVE
+  - And so moving all these objects around all these classes can be done manually but it can also be done automatically using something called "lifecycle configuration". And configuring those is something we are expected to know.
+  - S3 Lifecycle Rules
+    - Transition actions: It defines when objects are transitioned to another storage class
+      * e.g. move objects to Standard IA class 60 days after creation and then move to Glacier for archiving after 6 months
+    - Expiration actions: Configure objects to expire (delete) after some time
+      * e.g. Access log files can be set to delete after 365 days
+      * e.g. Can be used to delete old versions of files (if versioning is enabled)
+      * e.g. Can be used to delete incomplete multi-part uploads
+    - Rules can be created for certain prefix (e.g. s3://mybucket/mp3/*)
+    - Rules can be created for certain objects tags (e.g. Department - Finance)
+  - S3 Lifecycle Rules - Scenario 1
+    - Your application on EC2 creates images thumbnails after profile photos are uploaded to Amazon S3. These thumbnails can be easily recreated and only need to be kept for 45 days. The source images should be able to be immediately retrieves for these 45 days, and afterwards, the user can wait up to 6 hours. How would you design this?
+      * S3 source images can be on the Standard class and you can set up a lifecycle configuration to trasition them to GLACIER after 45 days. Because they need to be archived afterwards and we can wait up to six hours to retrieve them.
+      * And then for the thumbnails, they can be ONEZONE_IA. Because we can recreate them. And we can also setup a lifecycle configuration to expire them or delete them after 45 days. Just move the source image to GLACIER and the thumbnails can be on ONEZONE_IA because it is going to be cheaper and in case we lose an entire AZ in AWS, we can easily from the source image recreate all the thumbnails.
+      * This is going to be providing you the most cost effective rules for S3 bucket.
+  - S3 Lifecycle Rules - Scenario 2
+    - A rule in your company states that you should be able to recover your deletes S3 objects immediately for 15 days, although this may happen rarely. After this time, and for up to 365 days, deleted objects should be recoverable within 48 hours
+      * So we need to enable S3 versioning, because we want to delete files, but we want to be able to recover them. And so with S3 versioning, we're going to have object versions and the deleted objects are going to be hidden by delete marker and they can be easily recoverd.
+      * But we're going to have a non-current versions, basically the object's versions from before. And so these non-current versions we want to transition them into S3_IA because it's very unlikely that these old object versions are going to be accessed, But if it do, are accessed, then you need to make sure to recover them immediately.
+      * And then afterwards, after these 15 days of grace period to recover these non-current versions you can transition them into DEEP_ARCHIVE, such as for 100 and for 365 days. It can be archived and they will be recoverable within 48 hours. 
+      * Why we don't use GLACIER? Because Glacier will cost us a little bit more money because we have a timeline of 48 hours. And so we can use all the tiers all the way upto DEEP_ARCHIVE, to reach your file and get even more savings.
+
+8. S3 - Baseline Performance
